@@ -1,55 +1,60 @@
-// gta6-clipper-01 entry program (Node 22, standard library only).
+// Entry program for make.fun bounty gta6-clipper-01 (Node 22, stdlib only).
 //
-// The entry is a YouTube clip: my agent found a GTA 6 moment in Rockstar's
-// official trailers, cut it into a vertical Short with the make.fun pitch
-// burned in, and the clip's address will be handed in through VIDEO.json.
-// This program's whole job is to carry that address to the grader: it copies
-// VIDEO.json from the repository root (the bot directory) into /output,
-// where the gate reads it and looks the video up through the YouTube API.
+// What this bounty actually scores is a video: a vertical GTA 6 Short that
+// my agent cut from Rockstar's official trailers inside its own session
+// (footage fetched there, moments picked there, ffmpeg run there) and that
+// now lives as a public video on YouTube. This program is only the courier
+// for the video's address: it takes VIDEO.json from the repository root and
+// places a copy in the output directory, where the grader picks it up and
+// reads the video's view count through the YouTube API.
 //
-// Locally, MAKEFUN_BOT_DIR and MAKEFUN_OUTPUT_DIR stand in for /bot and
-// /output:
+// Before copying, the file is checked so a malformed entry fails here with
+// a clear message instead of failing silently at the gate: VIDEO.json must
+// parse as JSON and its "url" must look like a YouTube video address
+// (a /shorts/ or watch?v= page on youtube.com, or a youtu.be link).
+//
+// When run outside the grader, MAKEFUN_BOT_DIR and MAKEFUN_OUTPUT_DIR
+// override the /bot and /output defaults:
 //   mkdir -p out && MAKEFUN_BOT_DIR=. MAKEFUN_OUTPUT_DIR=out node main.ts
 
 import { copyFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 const botDir = process.env.MAKEFUN_BOT_DIR ?? '/bot';
-const outputDir = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
+const outDir = process.env.MAKEFUN_OUTPUT_DIR ?? '/output';
 
-const source = join(botDir, 'VIDEO.json');
-const target = join(outputDir, 'VIDEO.json');
+const srcPath = join(botDir, 'VIDEO.json');
+const dstPath = join(outDir, 'VIDEO.json');
 
-mkdirSync(outputDir, { recursive: true });
-
-let raw: string;
+let text: string;
 try {
-  raw = readFileSync(source, 'utf8');
-} catch (err) {
-  console.error(`cannot read ${source}: ${(err as Error).message}`);
+  text = readFileSync(srcPath, 'utf8');
+} catch (e) {
+  console.error(`could not read ${srcPath}: ${(e as Error).message}`);
   process.exit(1);
 }
 
-// Fail loudly here rather than at the gate if the file is not the shape the
-// bounty asks for: a JSON object whose url is a YouTube video address.
-let url: string;
+let videoUrl: string;
 try {
-  const parsed = JSON.parse(raw) as { url?: unknown };
-  if (typeof parsed.url !== 'string') throw new Error('missing "url" string');
-  url = parsed.url;
-} catch (err) {
-  console.error(`VIDEO.json is not valid: ${(err as Error).message}`);
+  const data: unknown = JSON.parse(text);
+  const url = (data as { url?: unknown } | null)?.url;
+  if (typeof url !== 'string' || url.length === 0) {
+    throw new Error('expected an object with a non-empty "url" string');
+  }
+  videoUrl = url;
+} catch (e) {
+  console.error(`VIDEO.json is malformed: ${(e as Error).message}`);
   process.exit(1);
 }
 
-const YOUTUBE_VIDEO =
-  /^https:\/\/(www\.|m\.)?(youtube\.com\/(shorts\/|watch\?v=)|youtu\.be\/)[A-Za-z0-9_-]{11}([?&#].*)?$/;
-if (!YOUTUBE_VIDEO.test(url)) {
-  console.error(`VIDEO.json url is not a YouTube video address: ${url}`);
+// YouTube video ids are 11 characters from [A-Za-z0-9_-].
+const youtubeRe =
+  /^https:\/\/(?:www\.|m\.)?(?:youtube\.com\/(?:shorts\/|watch\?v=)|youtu\.be\/)[A-Za-z0-9_-]{11}(?:[?&#].*)?$/;
+if (!youtubeRe.test(videoUrl)) {
+  console.error(`"url" is not a YouTube video address: ${videoUrl}`);
   process.exit(1);
 }
 
-copyFileSync(source, target);
-console.log(
-  `VIDEO.json copied to ${target} (${Buffer.byteLength(raw)} bytes, video: ${url})`,
-);
+mkdirSync(outDir, { recursive: true });
+copyFileSync(srcPath, dstPath);
+console.log(`copied VIDEO.json -> ${dstPath} (video: ${videoUrl})`);
