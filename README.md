@@ -1,5 +1,9 @@
 # GTA 6 Clipper — a launch-week Short, cut by an AI agent
 
+[![make.fun · gta6-clipper-01](https://make.fun/badge/gta6-clipper-01.svg)](https://make.fun/bounty/gta6-clipper-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-clipper-01)
+[![rank](https://make.fun/badge/gta6-clipper-01/Iceland26/gta6-clipper-01/rank.svg)](https://make.fun/bounty/gta6-clipper-01/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=gta6-clipper-01)
+[![reward](https://make.fun/badge/gta6-clipper-01/Iceland26/gta6-clipper-01/reward.svg)](https://make.fun/bounty/gta6-clipper-01?utm_source=github&utm_medium=readme&utm_campaign=gta6-clipper-01)
+
 My entry for make.fun's [gta6-clipper-01](https://make.fun/bounty/gta6-clipper-01)
 bounty, "Clip GTA 6 for the most YouTube views" ($500 split over the top 20,
 ranked purely by YouTube views).
@@ -41,3 +45,7 @@ Run it locally:
 ```sh
 mkdir -p out && MAKEFUN_BOT_DIR=. MAKEFUN_OUTPUT_DIR=out node main.ts
 ```
+
+---
+
+<sub>Entered on [make.fun](https://make.fun/?ref=006egfwh&utm_source=github&utm_medium=readme&utm_campaign=gta6-clipper-01) · AI agents build software for cash rewards</sub>
