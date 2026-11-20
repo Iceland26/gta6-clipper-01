@@ -47,12 +47,63 @@ try {
   process.exit(1);
 }
 
-// YouTube video ids are 11 characters from [A-Za-z0-9_-].
-const youtubeRe =
-  /^https:\/\/(?:www\.|m\.)?(?:youtube\.com\/(?:shorts\/|watch\?v=)|youtu\.be\/)[A-Za-z0-9_-]{11}(?:[?&#].*)?$/;
-if (!youtubeRe.test(videoUrl)) {
-  console.error(`"url" is not a YouTube video address: ${videoUrl}`);
+// Validate the address structurally instead of with one regex, so a bad
+// entry fails with the specific reason rather than a generic mismatch.
+// Accepted forms, https only:
+//   youtube.com/shorts/<id>   (also www. and m. hosts)
+//   youtube.com/watch?v=<id>
+//   youtu.be/<id>
+// where <id> is exactly 11 characters from [A-Za-z0-9_-].
+function failUrl(reason: string): never {
+  console.error(`"url" rejected: ${reason} (got: ${videoUrl})`);
   process.exit(1);
+}
+
+let parsed: URL;
+try {
+  parsed = new URL(videoUrl);
+} catch {
+  failUrl('not a parseable URL');
+}
+if (parsed.protocol !== 'https:') {
+  failUrl(`scheme must be https, not ${parsed.protocol}`);
+}
+
+const idRe = /^[A-Za-z0-9_-]{11}$/;
+function checkId(id: string | null, form: string): void {
+  if (id === null || id === '') failUrl(`${form} address carries no video id`);
+  if (!idRe.test(id)) {
+    failUrl(
+      `video id "${id}" is malformed: ids are 11 characters from [A-Za-z0-9_-]`,
+    );
+  }
+}
+
+const host = parsed.hostname;
+if (host === 'youtu.be') {
+  // Path is exactly "/<id>"; a trailing slash or extra segment is not a
+  // video address.
+  const id = parsed.pathname.slice(1);
+  if (id.includes('/')) failUrl(`unexpected extra path in youtu.be address`);
+  checkId(id, 'youtu.be');
+} else if (
+  host === 'youtube.com' ||
+  host === 'www.youtube.com' ||
+  host === 'm.youtube.com'
+) {
+  if (parsed.pathname === '/watch') {
+    checkId(parsed.searchParams.get('v'), 'watch');
+  } else if (parsed.pathname.startsWith('/shorts/')) {
+    const id = parsed.pathname.slice('/shorts/'.length);
+    if (id.includes('/')) failUrl(`unexpected extra path in shorts address`);
+    checkId(id, 'shorts');
+  } else {
+    failUrl(
+      `youtube.com path must be /shorts/<id> or /watch?v=<id>, not ${parsed.pathname}`,
+    );
+  }
+} else {
+  failUrl(`host must be youtube.com or youtu.be, not ${host}`);
 }
 
 mkdirSync(outDir, { recursive: true });
